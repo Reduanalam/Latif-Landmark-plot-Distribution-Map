@@ -189,9 +189,6 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </head>
 <body>
 
-  </div>
-</div>
-
 <!-- LOADING -->
 <div id="loadOverlay">
   <div class="spinner"></div>
@@ -350,7 +347,47 @@ async function sbFetch(path, method='GET', body=null){
 // Load all plots from Supabase
 async function dbLoad(){
   const data = await sbFetch('plots?select=*&order=block,num');
-  return data;
+
+  // Zone mapping for old format (no zone column):
+  // Old DB has block A: 1-119, B: 1-117, C: 1-112 (sequential, no zone)
+  // New DB has id like A-N-1, A-S-1 with zone column
+  // We detect which format and handle both
+
+  const ZONE_MAP = {
+    // northMax = total North plots; South = total - northMax
+    'A': {northMax:54},   // A-N: 1-54, A-S: 1-65
+    'B': {northMax:63},   // B-N: 1-63, B-S: 1-54
+    'C': {northMax:61},   // C-N: 1-61, C-S: 1-51
+  };
+
+  return data.map(x=>{
+    let zone = x.zone;
+    let num  = x.num;
+
+    if(!zone){
+      // Old format: id = "A-1" → derive zone from sequential num
+      const zm = ZONE_MAP[x.block];
+      if(zm){
+        if(num <= zm.northMax){
+          zone = 'N';
+          // num stays the same (1-65)
+        } else {
+          zone = 'S';
+          num  = num - zm.northMax; // remap to 1-54/52/47
+        }
+      } else {
+        zone = 'N';
+      }
+    }
+
+    const fiveK = FIVE_KATHA.has(`${x.block}-${zone}-${num}`);
+    return {
+      ...x,
+      id: x.id,        // keep original id for DB updates
+      zone, num,
+      size: fiveK ? '5 Katha (66-8"×54-0")' : '3 Katha (54-0"×40-0")'
+    };
+  });
 }
 
 // Update a single plot row in Supabase
@@ -369,22 +406,24 @@ async function dbResetAll(){
 //  FALLBACK: local plot data (used if no Supabase)
 // ═══════════════════════════════════════════════════
 function mkP(bl,zone,n){
-  // zone: 'N' = North, 'S' = South
+  const fiveK = FIVE_KATHA.has(`${bl}-${zone}-${n}`);
   return {id:`${bl}-${zone}-${n}`,block:bl,zone:zone,num:n,status:'available',
     name:'',phone:'',email:'',note:'',
-    size:'3 Katha (54-0"×40-0")'};
+    size: fiveK ? '5 Katha (66-8"×54-0")' : '3 Katha (54-0"×40-0")'};
 }
 function defPlots(){
   const r=[];
-  // Block A: North 65 plots, South 54 plots
-  for(let i=1;i<=65;i++) r.push(mkP('A','N',i));
-  for(let i=1;i<=54;i++) r.push(mkP('A','S',i));
-  // Block B: North 65 plots, South 52 plots
-  for(let i=1;i<=65;i++) r.push(mkP('B','N',i));
-  for(let i=1;i<=52;i++) r.push(mkP('B','S',i));
-  // Block C: North 65 plots, South 47 plots
-  for(let i=1;i<=65;i++) r.push(mkP('C','N',i));
-  for(let i=1;i<=47;i++) r.push(mkP('C','S',i));
+  // ── PDF + 5K plot analysis থেকে exact counts ───────────────
+  // Block A: Total 119  → North 54 (1-54)  + South 65 (1-65)
+  // Block B: Total 117  → North 63 (1-63)  + South 54 (1-54)
+  // Block C: Total 112  → North 61 (1-61)  + South 51 (1-51)
+  // Grand Total: 54+65 + 63+54 + 61+51 = 348 ✓
+  for(let i=1;i<=54;i++) r.push(mkP('A','N',i));
+  for(let i=1;i<=65;i++) r.push(mkP('A','S',i));
+  for(let i=1;i<=63;i++) r.push(mkP('B','N',i));
+  for(let i=1;i<=54;i++) r.push(mkP('B','S',i));
+  for(let i=1;i<=61;i++) r.push(mkP('C','N',i));
+  for(let i=1;i<=51;i++) r.push(mkP('C','S',i));
   return r;
 }
 function localLoad(){
@@ -447,8 +486,7 @@ function setOnline(on){
 async function refreshData(silent=false){
   if(!supabaseReady){ ntf('No database connected.','warn'); return; }
   try{
-    const fresh = await dbLoad();
-    // size already in record
+    plots = await dbLoad();
     updStats(); buildMap();
     if(document.getElementById('tc-list').style.display!=='none') renderList();
     if(document.getElementById('aPanel').style.display!=='none') renderAdmin();
@@ -482,7 +520,8 @@ function showTab(t){
 //  STATS
 // ═══════════════════════════════════════════════════
 function updStats(){
-  document.getElementById('sT').textContent=plots.length;
+  const total=plots.length;
+  document.getElementById('sT').textContent=total;
   document.getElementById('sA').textContent=plots.filter(p=>p.status==='available').length;
   document.getElementById('sP').textContent=plots.filter(p=>p.status==='pending').length;
   document.getElementById('sB').textContent=plots.filter(p=>p.status==='booked').length;
@@ -491,6 +530,26 @@ function updStats(){
 // ═══════════════════════════════════════════════════
 //  MAP BUILD
 // ═══════════════════════════════════════════════════
+// 5 Katha plots: Block A North col5 (53-65=13), Block A South col5 (53-54=2),
+// Block B North col5 (53-65=13), Block C North col5 (53-65=13) — total ~57 across all blocks
+// Per PDF: 57nos 5-Katha plots, identified by their position (last column = duplex/5K)
+// We tag them by block+zone+num using a Set
+const FIVE_KATHA = new Set([
+  // Block A South (10 plots): 1,13,14,26,27,39,40,52,53,65
+  ...([1,13,14,26,27,39,40,52,53,65].map(n=>`A-S-${n}`)),
+  // Block A North (10 plots): 1,10,11,20,21,30,31,40,47,48
+  ...([1,10,11,20,21,30,31,40,47,48].map(n=>`A-N-${n}`)),
+  // Block B South (10 plots): 1,6,7,12,13,23,24,34,44,45
+  ...([1,6,7,12,13,23,24,34,44,45].map(n=>`B-S-${n}`)),
+  // Block B North (9 plots): 1,16,17,25,37,38,50,51,63
+  ...([1,16,17,25,37,38,50,51,63].map(n=>`B-N-${n}`)),
+  // Block C South (8 plots): 9,10,19,29,30,40,41,51
+  ...([9,10,19,29,30,40,41,51].map(n=>`C-S-${n}`)),
+  // Block C North (10 plots): 1,13,14,26,27,37,38,48,49,61
+  ...([1,13,14,26,27,37,38,48,49,61].map(n=>`C-N-${n}`)),
+  // Total: 57 plots ✓
+]);
+function is5Katha(plot){ return FIVE_KATHA.has(`${plot.block}-${plot.zone}-${plot.num}`); }
 const CW=46,CH=44,G=3;
 function cw(n){return CW*n+G*(n-1);}
 function ch(n){return CH*n+G*(n-1);}
@@ -499,30 +558,31 @@ function gp(bl,zone,n){return plots.find(x=>x.block===bl&&x.zone===zone&&x.num==
 function pc(plot){
   if(!plot) return `<div class="pc em" style="width:${CW}px;height:${CH}px;"></div>`;
   const s=plot.status;
+  const fiveK = is5Katha(plot);
   let cls;
   if(s==='available'){
-    // plots 1-57 are 5 Katha, 58+ are 3 Katha
-    cls = plot.num<=57 ? 'av5k' : 'av3k';
+    cls = fiveK ? 'av5k' : 'av3k';
   } else {
     cls = s==='pending'?'pe':'bk';
   }
-  const lbl=s==='available'?'free':s==='pending'?'pend':'bkd';
-  const sizeTag = s==='available' ? (plot.num<=57?'5K':'3K') : '';
-  return `<div class="pc ${cls}" onclick="clickPlot('${plot.id}')" title="Block ${plot.block} #${String(plot.num).padStart(2,'0')} — ${s.toUpperCase()} — ${plot.num<=57?'5 Katha':'3 Katha'}">
+  const sizeTag = fiveK ? '5K' : '3K';
+  const lbl = s==='available' ? sizeTag : (s==='pending'?'pend':'bkd');
+  const sizeLabel = fiveK ? '5 Katha' : '3 Katha';
+  return `<div class="pc ${cls}" onclick="clickPlot('${plot.id}')" title="Block ${plot.block} #${String(plot.num).padStart(2,'0')} — ${s.toUpperCase()} — ${sizeLabel}">
     <span class="pn">${String(plot.num).padStart(2,'0')}</span>
-    <span class="ps">${s==='available'?sizeTag:lbl}</span>
+    <span class="ps">${lbl}</span>
   </div>`;
 }
-function fc(label,w,h){return `<div class="pc fc" style="width:${w}px;height:${h}px;min-width:${w}px;min-height:${h}px;">${label.replace(/\n/g,'<br>')}</div>`;}
-function dc(label,w,h){return `<div class="pc dp" style="width:${w}px;height:${h}px;min-width:${w}px;min-height:${h}px;">${label}</div>`;}
-function sv(label,w,h){return `<div class="pc sv" style="width:${w}px;height:${h}px;min-width:${w}px;min-height:${h}px;">${label}</div>`;}
-function em(w,h){return `<div class="pc em" style="width:${w}px;height:${h}px;"></div>`;}
+function facCell(label,w,h){return `<div class="pc fc" style="width:${w}px;height:${h}px;min-width:${w}px;min-height:${h}px;">${label.replace(/\n/g,'<br>')}</div>`;}
+function dupCell(label,w,h){return `<div class="pc dp" style="width:${w}px;height:${h}px;min-width:${w}px;min-height:${h}px;">${label}</div>`;}
+function svcCell(label,w,h){return `<div class="pc sv" style="width:${w}px;height:${h}px;min-width:${w}px;min-height:${h}px;">${label}</div>`;}
+function emCell(w,h){return `<div class="pc em" style="width:${w}px;height:${h}px;"></div>`;}
 function roadV(label,h){return `<div class="road-v" style="height:${h}px;">${label}</div>`;}
 function roadH(label,cls=''){return `<div class="road-h ${cls}">${label}</div>`;}
 
 function plotCol(nums,block,zone,maxNum){
   return `<div style="display:flex;flex-direction:column;gap:${G}px;">${
-    nums.map(n=>n>0&&n<=maxNum?pc(gp(block,zone,n)):em(CW,CH)).join('')
+    nums.map(n=>n>0&&n<=maxNum?pc(gp(block,zone,n)):emCell(CW,CH)).join('')
   }</div>`;
 }
 
@@ -556,18 +616,32 @@ function buildMap(){
   const ROWS = 13;
 
   // ── BLOCK A ──────────────────────────────────────────────
-  // ── BLOCK A ──────────────────────────────────────────────
-  // North: 65 plots (1-65), South: 54 plots (1-54)
-  // 5 cols × 13 rows pattern
+  // North: 54 plots (1-54), South: 65 plots (1-65)
   const AN=[
+    [1,2,3,4,5,6,7,8,9,10,11,12,13],
+    [26,25,24,23,22,21,20,19,18,17,16,15,14],
+    [27,28,29,30,31,32,33,34,35,36,37,38,39],
+    [52,51,50,49,48,47,46,45,44,43,42,41,40],
+    [53,54,0,0,0,0,0,0,0,0,0,0,0],
+  ];
+  const AS=[
     [1,2,3,4,5,6,7,8,9,10,11,12,13],
     [26,25,24,23,22,21,20,19,18,17,16,15,14],
     [27,28,29,30,31,32,33,34,35,36,37,38,39],
     [52,51,50,49,48,47,46,45,44,43,42,41,40],
     [53,54,55,56,57,58,59,60,61,62,63,64,65],
   ];
-  // South 54 plots: Col1:1-13, Col2:26-14, Col3:27-39, Col4:52-40, Col5:53-54+0s
-  const AS=[
+
+  // ── BLOCK B ──────────────────────────────────────────────
+  // North: 63 plots (1-63), South: 54 plots (1-54)
+  const BN=[
+    [1,2,3,4,5,6,7,8,9,10,11,12,13],
+    [26,25,24,23,22,21,20,19,18,17,16,15,14],
+    [27,28,29,30,31,32,33,34,35,36,37,38,39],
+    [52,51,50,49,48,47,46,45,44,43,42,41,40],
+    [53,54,55,56,57,58,59,60,61,62,63,0,0],
+  ];
+  const BS=[
     [1,2,3,4,5,6,7,8,9,10,11,12,13],
     [26,25,24,23,22,21,20,19,18,17,16,15,14],
     [27,28,29,30,31,32,33,34,35,36,37,38,39],
@@ -575,38 +649,20 @@ function buildMap(){
     [53,54,0,0,0,0,0,0,0,0,0,0,0],
   ];
 
-  // ── BLOCK B ──────────────────────────────────────────────
-  // North: 65 plots (1-65), South: 52 plots (1-52)
-  const BN=[
-    [1,2,3,4,5,6,7,8,9,10,11,12,13],
-    [26,25,24,23,22,21,20,19,18,17,16,15,14],
-    [27,28,29,30,31,32,33,34,35,36,37,38,39],
-    [52,51,50,49,48,47,46,45,44,43,42,41,40],
-    [53,54,55,56,57,58,59,60,61,62,63,64,65],
-  ];
-  // South 52 plots: 4 full cols × 13 = 52
-  const BS=[
-    [1,2,3,4,5,6,7,8,9,10,11,12,13],
-    [26,25,24,23,22,21,20,19,18,17,16,15,14],
-    [27,28,29,30,31,32,33,34,35,36,37,38,39],
-    [52,51,50,49,48,47,46,45,44,43,42,41,40],
-  ];
-
   // ── BLOCK C ──────────────────────────────────────────────
-  // North: 65 plots (1-65), South: 47 plots (1-47)
+  // North: 61 plots (1-61), South: 51 plots (1-51)
   const CN=[
-    [13,12,11,10,9,8,7,6,5,4,3,2,1],
-    [14,15,16,17,18,19,20,21,22,23,24,25,26],
-    [39,38,37,36,35,34,33,32,31,30,29,28,27],
-    [40,41,42,43,44,45,46,47,48,49,50,51,52],
-    [65,64,63,62,61,60,59,58,57,56,55,54,53],
+    [1,2,3,4,5,6,7,8,9,10,11,12,13],
+    [26,25,24,23,22,21,20,19,18,17,16,15,14],
+    [27,28,29,30,31,32,33,34,35,36,37,38,39],
+    [52,51,50,49,48,47,46,45,44,43,42,41,40],
+    [53,54,55,56,57,58,59,60,61,0,0,0,0],
   ];
-  // South 47 plots: 3 full cols × 13 = 39, + col4: 8 plots
   const CS=[
     [1,2,3,4,5,6,7,8,9,10,11,12,13],
     [26,25,24,23,22,21,20,19,18,17,16,15,14],
     [27,28,29,30,31,32,33,34,35,36,37,38,39],
-    [47,46,45,44,43,42,41,40,0,0,0,0,0],
+    [51,50,49,48,47,46,45,44,43,42,41,40,0],
   ];
 
   // ── AVENUE ROAD (মাঝখানের রাস্তা - North ও South এর মাঝে vertical) ──
@@ -642,14 +698,14 @@ function buildMap(){
     </div>`;
   }
 
-  const A_north = buildZone(AN,'A','N',65,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
-  const A_south = buildZone(AS,'A','S',54,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
+  const A_north = buildZone(AN,'A','N',54,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
+  const A_south = buildZone(AS,'A','S',65,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
 
-  const B_north = buildZone(BN,'B','N',65,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
-  const B_south = buildZone(BS,'B','S',52,['RD-01','RD-02','RD-03','RD-04','RD-05'],null);
+  const B_north = buildZone(BN,'B','N',63,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
+  const B_south = buildZone(BS,'B','S',54,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
 
-  const C_north = buildZone(CN,'C','N',65,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
-  const C_south = buildZone(CS,'C','S',47,['RD-01','RD-02','RD-03','RD-04'],null);
+  const C_north = buildZone(CN,'C','N',61,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
+  const C_south = buildZone(CS,'C','S',51,['RD-01','RD-02','RD-03','RD-04','RD-05'],null);
 
   html += blockHTML('A', A_north, A_south, 119);
   html += blockHTML('B', B_north, B_south, 117);
@@ -670,11 +726,12 @@ function clickPlot(id){
 //  BOOKING MODAL
 // ═══════════════════════════════════════════════════
 function openBook(p){
+  const sz = is5Katha(p) ? '5 Katha (66-8"×54-0")' : '3 Katha (54-0"×40-0")';
   document.getElementById('mTitle').textContent=`Book Plot ${String(p.num).padStart(2,'0')} – Block ${p.block} (${p.zone==='N'?'North':'South'} Zone)`;
   document.getElementById('mInfo').innerHTML=`
     <div class="ir"><span>Plot #</span><span><b>${String(p.num).padStart(2,'0')}</b></span></div>
     <div class="ir"><span>Block</span><span>Block ${p.block}</span></div>
-    <div class="ir"><span>Size</span><span>${p.size}</span></div>
+    <div class="ir"><span>Size</span><span>${sz}</span></div>
     <div class="ir" style="margin-bottom:12px"><span>Status</span><span style="color:var(--green);font-weight:700">✔ Available</span></div>`;
   ['bN','bPh','bE','bNo'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('mBook').classList.add('show');
@@ -699,7 +756,7 @@ async function submitBook(){
     try{
       await dbUpdate(p.id, fields);
       // refresh from DB
-      plots = (await dbLoad()).map(x=>({...x,size:x.num<=57?'5 Katha (66-8"×54-0")':'3 Katha (54-0"×40-0")'}));
+      plots = await dbLoad();
     }catch(e){
       ntf('Save failed: '+e.message,'error');
       btn.textContent='Submit Request';btn.disabled=false;
@@ -722,13 +779,14 @@ async function submitBook(){
 //  VIEW MODAL
 // ═══════════════════════════════════════════════════
 function openView(p){
+  const sz = is5Katha(p) ? '5 Katha (66-8"×54-0")' : '3 Katha (54-0"×40-0")';
   document.getElementById('vTitle').textContent=`Plot ${String(p.num).padStart(2,'0')} – Block ${p.block} (${p.zone==='N'?'North':'South'} Zone)`;
   document.getElementById('vSub').textContent=`Status: ${p.status.toUpperCase()}`;
   document.getElementById('vRows').innerHTML=`
     <div class="ir"><span>Plot #</span><span>${String(p.num).padStart(2,'0')}</span></div>
     <div class="ir"><span>Block</span><span>Block ${p.block}</span></div>
     <div class="ir"><span>Zone</span><span>${p.zone==='N'?'North Zone':'South Zone'}</span></div>
-    <div class="ir"><span>Size</span><span>${p.size}</span></div>
+    <div class="ir"><span>Size</span><span>${sz}</span></div>
     <div class="ir"><span>Status</span><span class="bdg ${p.status}">${p.status}</span></div>
     ${p.name?`<div class="ir"><span>Applicant</span><span>${p.name}</span></div>`:''}
     ${p.phone?`<div class="ir"><span>Phone</span><span>${p.phone}</span></div>`:''}
@@ -882,6 +940,7 @@ window.onload = init;
   create table plots (
     id text primary key,
     block text not null,
+    zone text not null default 'N',
     num integer not null,
     status text not null default 'available',
     name text default '',
@@ -896,15 +955,30 @@ window.onload = init;
   create policy "Public write" on plots for insert with check (true);
   create policy "Public update" on plots for update using (true);
 
-  -- Insert all 348 plots (A=119, B=117, C=112)
+  -- Insert all 348 plots
+  -- Block A: North 65 + South 54 = 119
+  -- Block B: North 65 + South 52 = 117
+  -- Block C: North 65 + South 47 = 112
+  -- Total: 348
   do $$
-  declare b text; i int;
+  declare
+    b text; z text; i int; maxn int;
   begin
     foreach b in array array['A','B','C'] loop
-      for i in 1..(case b when 'A' then 119 when 'B' then 117 else 112 end) loop
-        insert into plots(id,block,num,status,name,phone,email,note)
-        values(b||'-'||i, b, i, 'available','','','','')
-        on conflict(id) do nothing;
+      foreach z in array array['N','S'] loop
+        maxn := case
+          when b='A' and z='N' then 65
+          when b='A' and z='S' then 54
+          when b='B' and z='N' then 65
+          when b='B' and z='S' then 52
+          when b='C' and z='N' then 65
+          when b='C' and z='S' then 47
+          else 0 end;
+        for i in 1..maxn loop
+          insert into plots(id,block,zone,num,status,name,phone,email,note)
+          values(b||'-'||z||'-'||i, b, z, i, 'available','','','','')
+          on conflict(id) do nothing;
+        end loop;
       end loop;
     end loop;
   end $$;
