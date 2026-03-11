@@ -76,17 +76,17 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 .bh-c{display:flex;align-items:center;gap:4px;}
 
 /* ROADS - full continuous bars */
-.road-h{background:var(--road-bg);border-top:1.5px solid var(--road-border);border-bottom:1.5px solid var(--road-border);height:24px;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:2px;color:var(--road-text);white-space:nowrap;width:100%;}
+.road-h{background:var(--road-bg);border-top:1.5px solid var(--road-border);border-bottom:1.5px solid var(--road-border);height:24px;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:2px;color:var(--road-text);white-space:nowrap;width:100%;align-self:stretch;}
 .road-h.avenue{background:#1e293b;border-top:3px solid #f59e0b;border-bottom:3px solid #f59e0b;height:30px;color:#f59e0b;font-size:.78rem;letter-spacing:3px;}
 .road-v{background:var(--road-bg);border-left:1.5px solid var(--road-border);border-right:1.5px solid var(--road-border);width:16px;min-width:16px;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:.35rem;font-weight:700;letter-spacing:1px;color:var(--road-text);writing-mode:vertical-rl;white-space:nowrap;flex-shrink:0;}
 
 /* ZONE LABEL */
-.zone-label{font-family:'Rajdhani',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:2px;color:var(--muted);padding:4px 12px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.zone-label{font-family:'Rajdhani',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:2px;color:var(--muted);padding:4px 12px;background:var(--surface2);border-bottom:1px solid var(--border);width:100%;text-align:center;}
 
 /* ZONES ROW — North & South পাশাপাশি */
-.zones-row{display:flex;align-items:stretch;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.zone-col{display:flex;flex-direction:column;flex:1;min-width:0;}
-.zone-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;flex:1;}
+.zones-row{display:flex;align-items:stretch;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;justify-content:center;}
+.zone-col{display:flex;flex-direction:column;flex:1;min-width:0;align-items:center;}
+.zone-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;flex:1;display:flex;flex-direction:column;align-items:center;}
 
 /* AVENUE ROAD — উল্লম্ব বিভাজক */
 .avenue-v{
@@ -124,6 +124,10 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 .ps{font-size:.44rem;font-family:'Nunito',sans-serif;color:rgba(255,255,255,.75);line-height:1;margin-top:1px;}
 .av{background:var(--primary);border-color:#166534;color:#fff;}
 .av:hover{background:var(--primary-h);transform:scale(1.1);box-shadow:0 0 12px rgba(26,92,56,.3);z-index:2;position:relative;}
+.av5k{background:#1e40af;border-color:#1e3a8a;color:#fff;}
+.av5k:hover{background:#2563eb;transform:scale(1.1);box-shadow:0 0 12px rgba(30,64,175,.3);z-index:2;position:relative;}
+.av3k{background:#1a5c38;border-color:#166534;color:#fff;}
+.av3k:hover{background:#1e7044;transform:scale(1.1);box-shadow:0 0 12px rgba(26,92,56,.3);z-index:2;position:relative;}
 .pe{background:#b45309;border-color:#92400e;color:#fff;}
 .pe:hover{background:#d97706;transform:scale(1.07);}
 .bk{background:#991b1b;border-color:#7f1d1d;color:#fff;}
@@ -213,7 +217,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <div class="ntf" id="ntf"></div>
 
 <div class="main">
-  <div class="stats-bar">
+  <div class="stats-bar" id="statsBar" style="display:none">
     <div class="sc st"><div class="v" id="sT">348</div><div class="l">Total Plots</div></div>
     <div class="sc sa"><div class="v" id="sA">—</div><div class="l">Available</div></div>
     <div class="sc sp"><div class="v" id="sP">—</div><div class="l">Pending Approval</div></div>
@@ -223,13 +227,11 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   <!-- MAP TAB -->
   <div id="tc-map">
     <div class="legend">
-      <div class="li"><div class="ld" style="background:var(--primary)"></div>Available – click to book</div>
+      <div class="li"><div class="ld" style="background:#1e40af"></div>5 Katha – Available</div>
+      <div class="li"><div class="ld" style="background:#1a5c38"></div>3 Katha – Available</div>
       <div class="li"><div class="ld" style="background:#b45309"></div>Pending Approval</div>
       <div class="li"><div class="ld" style="background:#991b1b"></div>Booked</div>
-      <div class="li"><div class="ld" style="background:#dbeafe;border:1px solid #93c5fd"></div>Duplex</div>
-      <div class="li"><div class="ld" style="background:var(--fac-bg);border:1px solid var(--fac-border)"></div>Facility</div>
-      <div class="li"><div class="ld" style="background:var(--road-bg);border:1px solid var(--road-border)"></div>Road</div>
-    </div>
+      </div>
     <div class="map-wrap"><div id="mapRoot"></div></div>
   </div>
 
@@ -241,7 +243,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <input id="fQ" type="text" placeholder="Search plot #..." oninput="renderList()" style="width:130px">
       <button class="btn btn-o btn-sm" onclick="refreshData()">🔄 Refresh</button>
     </div>
-    <div class="tw"><table class="at"><thead><tr><th>Plot #</th><th>Block</th><th>Size</th><th>Status</th><th>Applicant</th><th>Phone</th><th>Action</th></tr></thead><tbody id="lTb"></tbody></table></div>
+    <div class="tw"><table class="at"><thead><tr><th>Plot #</th><th>Block</th><th>Zone</th><th>Status</th><th>Applicant</th><th>Phone</th><th>Action</th></tr></thead><tbody id="lTb"></tbody></table></div>
   </div>
 
   <!-- ADMIN TAB -->
@@ -268,7 +270,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <input id="afQ" type="text" placeholder="Search name/plot..." oninput="renderAdmin()" style="width:140px">
         <button class="btn btn-r btn-sm" onclick="resetAll()" style="margin-left:auto">🗑 Reset All</button>
       </div>
-      <div class="tw"><table class="at"><thead><tr><th>Plot #</th><th>Block</th><th>Size</th><th>Applicant</th><th>Phone</th><th>Email</th><th>Note</th><th>Status</th><th>Actions</th></tr></thead><tbody id="aTb"></tbody></table></div>
+      <div class="tw"><table class="at"><thead><tr><th>Plot #</th><th>Block</th><th>Zone</th><th>Applicant</th><th>Phone</th><th>Email</th><th>Note</th><th>Status</th><th>Actions</th></tr></thead><tbody id="aTb"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -323,14 +325,18 @@ try{ adminIn = localStorage.getItem('mp_adm')==='1'; }catch(e){}
 //  SUPABASE REST HELPERS
 // ═══════════════════════════════════════════════════
 async function sbFetch(path, method='GET', body=null){
+  const headers = {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type': 'application/json',
+  };
+  if(method==='PATCH') headers['Prefer']='return=minimal';
+  if(method==='POST')  headers['Prefer']='return=representation';
+
   const res = await fetch(SUPA_URL + '/rest/v1/' + path, {
     method,
-    headers:{
-      'apikey': SUPA_KEY,
-      'Authorization': 'Bearer ' + SUPA_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': method==='POST' ? 'return=representation' : (method==='PATCH'?'return=representation':''),
-    },
+    mode: 'cors',
+    headers,
     body: body ? JSON.stringify(body) : undefined
   });
   if(!res.ok){
@@ -362,16 +368,23 @@ async function dbResetAll(){
 // ═══════════════════════════════════════════════════
 //  FALLBACK: local plot data (used if no Supabase)
 // ═══════════════════════════════════════════════════
-function mkP(bl,n){
-  return {id:`${bl}-${n}`,block:bl,num:n,status:'available',
+function mkP(bl,zone,n){
+  // zone: 'N' = North, 'S' = South
+  return {id:`${bl}-${zone}-${n}`,block:bl,zone:zone,num:n,status:'available',
     name:'',phone:'',email:'',note:'',
-    size:n<=57?'5 Katha (66-8"×54-0")':'3 Katha (54-0"×40-0")'};
+    size:'3 Katha (54-0"×40-0")'};
 }
 function defPlots(){
   const r=[];
-  for(let i=1;i<=119;i++) r.push(mkP('A',i));
-  for(let i=1;i<=117;i++) r.push(mkP('B',i));
-  for(let i=1;i<=112;i++) r.push(mkP('C',i));
+  // Block A: North 65 plots, South 54 plots
+  for(let i=1;i<=65;i++) r.push(mkP('A','N',i));
+  for(let i=1;i<=54;i++) r.push(mkP('A','S',i));
+  // Block B: North 65 plots, South 52 plots
+  for(let i=1;i<=65;i++) r.push(mkP('B','N',i));
+  for(let i=1;i<=52;i++) r.push(mkP('B','S',i));
+  // Block C: North 65 plots, South 47 plots
+  for(let i=1;i<=65;i++) r.push(mkP('C','N',i));
+  for(let i=1;i<=47;i++) r.push(mkP('C','S',i));
   return r;
 }
 function localLoad(){
@@ -392,13 +405,13 @@ async function init(){
       setLoad('CONNECTING TO DATABASE...');
       plots = await dbLoad();
       // add size field if not present (computed)
-      plots = plots.map(p=>({...p, size: p.num<=57?'5 Katha (66-8"×54-0")':'3 Katha (54-0"×40-0")'}));
+      // size already in record
       supabaseReady = true;
       setOnline(true);
       hideLoad();
     } catch(e){
       console.error('Supabase error:', e);
-      ntf('⚠️ Could not reach database. Using local data.','warn');
+      ntf('⚠️ Database connection failed. Check network & try refresh.','warn');console.error('DB Error:',e);
       plots = localLoad();
       setOnline(false);
       hideLoad();
@@ -410,7 +423,7 @@ async function init(){
     hideLoad();
   }
 
-  if(adminIn) document.getElementById('tab-admin').style.display='flex';
+  if(adminIn){document.getElementById('tab-admin').style.display='flex';document.getElementById('statsBar').style.display='flex';}
   updStats();
   buildMap();
   document.querySelectorAll('.mo').forEach(el=>
@@ -435,7 +448,7 @@ async function refreshData(silent=false){
   if(!supabaseReady){ ntf('No database connected.','warn'); return; }
   try{
     const fresh = await dbLoad();
-    plots = fresh.map(p=>({...p, size: p.num<=57?'5 Katha (66-8"×54-0")':'3 Katha (54-0"×40-0")'}));
+    // size already in record
     updStats(); buildMap();
     if(document.getElementById('tc-list').style.display!=='none') renderList();
     if(document.getElementById('aPanel').style.display!=='none') renderAdmin();
@@ -481,16 +494,23 @@ function updStats(){
 const CW=46,CH=44,G=3;
 function cw(n){return CW*n+G*(n-1);}
 function ch(n){return CH*n+G*(n-1);}
-function gp(bl,n){return plots.find(x=>x.block===bl&&x.num===n);}
+function gp(bl,zone,n){return plots.find(x=>x.block===bl&&x.zone===zone&&x.num===n);}
 
 function pc(plot){
   if(!plot) return `<div class="pc em" style="width:${CW}px;height:${CH}px;"></div>`;
   const s=plot.status;
-  const cls=s==='available'?'av':s==='pending'?'pe':'bk';
+  let cls;
+  if(s==='available'){
+    // plots 1-57 are 5 Katha, 58+ are 3 Katha
+    cls = plot.num<=57 ? 'av5k' : 'av3k';
+  } else {
+    cls = s==='pending'?'pe':'bk';
+  }
   const lbl=s==='available'?'free':s==='pending'?'pend':'bkd';
-  return `<div class="pc ${cls}" onclick="clickPlot('${plot.id}')" title="Block ${plot.block} #${String(plot.num).padStart(2,'0')} — ${s.toUpperCase()}">
+  const sizeTag = s==='available' ? (plot.num<=57?'5K':'3K') : '';
+  return `<div class="pc ${cls}" onclick="clickPlot('${plot.id}')" title="Block ${plot.block} #${String(plot.num).padStart(2,'0')} — ${s.toUpperCase()} — ${plot.num<=57?'5 Katha':'3 Katha'}">
     <span class="pn">${String(plot.num).padStart(2,'0')}</span>
-    <span class="ps">${lbl}</span>
+    <span class="ps">${s==='available'?sizeTag:lbl}</span>
   </div>`;
 }
 function fc(label,w,h){return `<div class="pc fc" style="width:${w}px;height:${h}px;min-width:${w}px;min-height:${h}px;">${label.replace(/\n/g,'<br>')}</div>`;}
@@ -500,20 +520,20 @@ function em(w,h){return `<div class="pc em" style="width:${w}px;height:${h}px;">
 function roadV(label,h){return `<div class="road-v" style="height:${h}px;">${label}</div>`;}
 function roadH(label,cls=''){return `<div class="road-h ${cls}">${label}</div>`;}
 
-function plotCol(nums,block,maxNum){
+function plotCol(nums,block,zone,maxNum){
   return `<div style="display:flex;flex-direction:column;gap:${G}px;">${
-    nums.map(n=>n>0&&n<=maxNum?pc(gp(block,n)):em(CW,CH)).join('')
+    nums.map(n=>n>0&&n<=maxNum?pc(gp(block,zone,n)):em(CW,CH)).join('')
   }</div>`;
 }
 
 // একটা zone build করে — plots + right panel
-function buildZone(cols, block, maxNum, roadLabels, rightPanel){
+function buildZone(cols, block, zone, maxNum, roadLabels, rightPanel){
   const rows = cols[0].length;
   const h = CH*rows + G*(rows-1);
-  let html = `<div style="display:flex;align-items:stretch;gap:0;">`;
+  let html = `<div style="display:flex;align-items:stretch;gap:0;margin:0 auto;">`;
   html += roadV(roadLabels[0], h);
   cols.forEach((col,i)=>{
-    html += plotCol(col, block, maxNum);
+    html += plotCol(col, block, zone, maxNum);
     html += roadV(roadLabels[i+1]||'RD', h);
   });
   if(rightPanel) html += rightPanel;
@@ -525,6 +545,7 @@ function blockCounts(bl){
   const av=plots.filter(p=>p.block===bl&&p.status==='available').length;
   const pe=plots.filter(p=>p.block===bl&&p.status==='pending').length;
   const bk=plots.filter(p=>p.block===bl&&p.status==='booked').length;
+  const tot=plots.filter(p=>p.block===bl).length;
   return `<span class="bh-c"><span style="color:#86efac">●</span> ${av} Avail</span>
           <span class="bh-c"><span style="color:#fcd34d">●</span> ${pe} Pending</span>
           <span class="bh-c"><span style="color:#fca5a5">●</span> ${bk} Booked</span>`;
@@ -535,6 +556,9 @@ function buildMap(){
   const ROWS = 13;
 
   // ── BLOCK A ──────────────────────────────────────────────
+  // ── BLOCK A ──────────────────────────────────────────────
+  // North: 65 plots (1-65), South: 54 plots (1-54)
+  // 5 cols × 13 rows pattern
   const AN=[
     [1,2,3,4,5,6,7,8,9,10,11,12,13],
     [26,25,24,23,22,21,20,19,18,17,16,15,14],
@@ -542,21 +566,17 @@ function buildMap(){
     [52,51,50,49,48,47,46,45,44,43,42,41,40],
     [53,54,55,56,57,58,59,60,61,62,63,64,65],
   ];
+  // South 54 plots: Col1:1-13, Col2:26-14, Col3:27-39, Col4:52-40, Col5:53-54+0s
   const AS=[
-    [66,67,68,69,70,71,72,73,74,75,76,77,78],
-    [91,90,89,88,87,86,85,84,83,82,81,80,79],
-    [92,93,94,95,96,97,98,99,100,101,102,103,104],
-    [119,118,117,116,115,114,113,112,111,110,109,108,107],
-    [105,106,0,0,0,0,0,0,0,0,0,0,0],
+    [1,2,3,4,5,6,7,8,9,10,11,12,13],
+    [26,25,24,23,22,21,20,19,18,17,16,15,14],
+    [27,28,29,30,31,32,33,34,35,36,37,38,39],
+    [52,51,50,49,48,47,46,45,44,43,42,41,40],
+    [53,54,0,0,0,0,0,0,0,0,0,0,0],
   ];
-  const A_Nr=`<div style="display:flex;flex-direction:column;gap:${G}px;margin-left:${G}px;">
-    ${dc('DUPLEX',cw(2),ch(2))}${fc('COMMUNITY\nCENTER',cw(2),ch(8))}${fc('SOCIETY\nOFFICE',cw(2),ch(3))}
-  </div>`;
-  const A_Sr=`<div style="display:flex;flex-direction:column;gap:${G}px;margin-left:${G}px;">
-    ${dc('DUPLEX',cw(2),ch(3))}${fc('FIRE\nSTATION',cw(2),ch(3))}${em(cw(2),ch(7))}
-  </div>`;
 
   // ── BLOCK B ──────────────────────────────────────────────
+  // North: 65 plots (1-65), South: 52 plots (1-52)
   const BN=[
     [1,2,3,4,5,6,7,8,9,10,11,12,13],
     [26,25,24,23,22,21,20,19,18,17,16,15,14],
@@ -564,20 +584,16 @@ function buildMap(){
     [52,51,50,49,48,47,46,45,44,43,42,41,40],
     [53,54,55,56,57,58,59,60,61,62,63,64,65],
   ];
+  // South 52 plots: 4 full cols × 13 = 52
   const BS=[
-    [66,67,68,69,70,71,72,73,74,75,76,77,78],
-    [91,90,89,88,87,86,85,84,83,82,81,80,79],
-    [92,93,94,95,96,97,98,99,100,101,102,103,104],
-    [117,116,115,114,113,112,111,110,109,108,107,106,105],
+    [1,2,3,4,5,6,7,8,9,10,11,12,13],
+    [26,25,24,23,22,21,20,19,18,17,16,15,14],
+    [27,28,29,30,31,32,33,34,35,36,37,38,39],
+    [52,51,50,49,48,47,46,45,44,43,42,41,40],
   ];
-  const B_Nr=`<div style="display:flex;flex-direction:column;gap:${G}px;margin-left:${G}px;">
-    ${fc('PLAY\nGROUND',cw(2),ch(ROWS))}
-  </div>`;
-  const B_Sr=`<div style="display:flex;flex-direction:column;gap:${G}px;margin-left:${G}px;">
-    ${fc('MOSQUE',cw(2),ch(5))}${fc('PLAY\nGROUND',cw(2),ch(8))}
-  </div>`;
 
   // ── BLOCK C ──────────────────────────────────────────────
+  // North: 65 plots (1-65), South: 47 plots (1-47)
   const CN=[
     [13,12,11,10,9,8,7,6,5,4,3,2,1],
     [14,15,16,17,18,19,20,21,22,23,24,25,26],
@@ -585,23 +601,13 @@ function buildMap(){
     [40,41,42,43,44,45,46,47,48,49,50,51,52],
     [65,64,63,62,61,60,59,58,57,56,55,54,53],
   ];
+  // South 47 plots: 3 full cols × 13 = 39, + col4: 8 plots
   const CS=[
-    [66,67,68,69,70,71,72,73,74,75,76,77,78],
-    [91,90,89,88,87,86,85,84,83,82,81,80,79],
-    [92,93,94,95,96,97,98,99,100,101,102,103,104],
-    [105,106,107,108,109,110,111,112,0,0,0,0,0],
+    [1,2,3,4,5,6,7,8,9,10,11,12,13],
+    [26,25,24,23,22,21,20,19,18,17,16,15,14],
+    [27,28,29,30,31,32,33,34,35,36,37,38,39],
+    [47,46,45,44,43,42,41,40,0,0,0,0,0],
   ];
-  const C_Nr=`<div style="display:flex;flex-direction:column;gap:${G}px;margin-left:${G}px;">
-    ${fc('SUPERSHOP\n& KATCHA BAZAR',cw(2),ch(3))}
-    ${fc('SCHOOL',cw(2),ch(3))}
-    ${fc('PLAY\nGROUND',cw(2),ch(4))}
-    ${fc('MOSQUE',cw(2),ch(3))}
-  </div>`;
-  const C_Sr=`<div style="display:flex;flex-direction:column;gap:${G}px;margin-left:${G}px;">
-    ${fc('POWER\nSTATION',cw(2),ch(3))}
-    ${fc('COMMERCIAL\nSPACE',cw(2),ch(4))}
-    ${em(cw(2),ch(6))}
-  </div>`;
 
   // ── AVENUE ROAD (মাঝখানের রাস্তা - North ও South এর মাঝে vertical) ──
   const avenueRoad=`<div class="avenue-v">50' AVENUE ROAD</div>`;
@@ -636,14 +642,14 @@ function buildMap(){
     </div>`;
   }
 
-  const A_north = buildZone(AN,'A',119,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],A_Nr);
-  const A_south = buildZone(AS,'A',119,['RD-03','RD-04','RD-05','RD-06','RD-07','RD-08'],A_Sr);
+  const A_north = buildZone(AN,'A','N',65,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
+  const A_south = buildZone(AS,'A','S',54,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
 
-  const B_north = buildZone(BN,'B',117,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],B_Nr);
-  const B_south = buildZone(BS,'B',117,['RD-03','RD-04','RD-05','RD-06','RD-07'],B_Sr);
+  const B_north = buildZone(BN,'B','N',65,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
+  const B_south = buildZone(BS,'B','S',52,['RD-01','RD-02','RD-03','RD-04','RD-05'],null);
 
-  const C_north = buildZone(CN,'C',112,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],C_Nr);
-  const C_south = buildZone(CS,'C',112,['RD-03','RD-04','RD-05','RD-06','RD-07'],C_Sr);
+  const C_north = buildZone(CN,'C','N',65,['RD-01','RD-02','RD-03','RD-04','RD-05','RD-06'],null);
+  const C_south = buildZone(CS,'C','S',47,['RD-01','RD-02','RD-03','RD-04'],null);
 
   html += blockHTML('A', A_north, A_south, 119);
   html += blockHTML('B', B_north, B_south, 117);
@@ -664,7 +670,7 @@ function clickPlot(id){
 //  BOOKING MODAL
 // ═══════════════════════════════════════════════════
 function openBook(p){
-  document.getElementById('mTitle').textContent=`Book Plot ${String(p.num).padStart(2,'0')} – Block ${p.block}`;
+  document.getElementById('mTitle').textContent=`Book Plot ${String(p.num).padStart(2,'0')} – Block ${p.block} (${p.zone==='N'?'North':'South'} Zone)`;
   document.getElementById('mInfo').innerHTML=`
     <div class="ir"><span>Plot #</span><span><b>${String(p.num).padStart(2,'0')}</b></span></div>
     <div class="ir"><span>Block</span><span>Block ${p.block}</span></div>
@@ -709,18 +715,19 @@ async function submitBook(){
   if(document.getElementById('tc-list').style.display!=='none') renderList();
   closeMo('mBook');
   btn.textContent='Submit Request';btn.disabled=false;
-  ntf(`✅ Request submitted – Block ${p.block} Plot ${p.num}. Awaiting admin approval.`,'info');
+  ntf(`✅ Request submitted – Block ${p.block} (${p.zone==='N'?'North':'South'}) Plot ${p.num}. Awaiting approval.`,'info');
 }
 
 // ═══════════════════════════════════════════════════
 //  VIEW MODAL
 // ═══════════════════════════════════════════════════
 function openView(p){
-  document.getElementById('vTitle').textContent=`Plot ${String(p.num).padStart(2,'0')} – Block ${p.block}`;
+  document.getElementById('vTitle').textContent=`Plot ${String(p.num).padStart(2,'0')} – Block ${p.block} (${p.zone==='N'?'North':'South'} Zone)`;
   document.getElementById('vSub').textContent=`Status: ${p.status.toUpperCase()}`;
   document.getElementById('vRows').innerHTML=`
     <div class="ir"><span>Plot #</span><span>${String(p.num).padStart(2,'0')}</span></div>
     <div class="ir"><span>Block</span><span>Block ${p.block}</span></div>
+    <div class="ir"><span>Zone</span><span>${p.zone==='N'?'North Zone':'South Zone'}</span></div>
     <div class="ir"><span>Size</span><span>${p.size}</span></div>
     <div class="ir"><span>Status</span><span class="bdg ${p.status}">${p.status}</span></div>
     ${p.name?`<div class="ir"><span>Applicant</span><span>${p.name}</span></div>`:''}
@@ -747,7 +754,7 @@ function renderList(){
     <tr>
       <td><b>${String(p.num).padStart(2,'0')}</b></td>
       <td>Block ${p.block}</td>
-      <td style="font-size:.74rem;color:var(--muted)">${p.size}</td>
+      <td style="font-size:.74rem;color:var(--muted)">${p.zone==='N'?'North':'South'}</td>
       <td><span class="bdg ${p.status}">${p.status}</span></td>
       <td>${p.name||'<span style="color:var(--muted)">—</span>'}</td>
       <td>${p.phone||'<span style="color:var(--muted)">—</span>'}</td>
@@ -765,12 +772,12 @@ function listView(id){const p=plots.find(x=>x.id===id);if(p)openView(p);}
 function showAdminLogin(){document.getElementById('tab-admin').style.display='flex';showTab('admin');}
 function doLogin(){
   if(document.getElementById('aU').value===AU&&document.getElementById('aP').value===AP){
-    adminIn=true;localStorage.setItem('mp_adm','1');showPanel();renderAdmin();ntf('Admin login successful.','success');
+    adminIn=true;localStorage.setItem('mp_adm','1');showPanel();renderAdmin();document.getElementById('statsBar').style.display='flex';ntf('Admin login successful.','success');
   }else ntf('Invalid credentials.','error');
 }
 function showPanel(){document.getElementById('aLogin').style.display='none';document.getElementById('aPanel').style.display='block';}
 function doLogout(){
-  adminIn=false;localStorage.removeItem('mp_adm');
+  adminIn=false;localStorage.removeItem('mp_adm');document.getElementById('statsBar').style.display='none';
   document.getElementById('aLogin').style.display='block';
   document.getElementById('aPanel').style.display='none';
   document.getElementById('tab-admin').style.display='none';
@@ -791,7 +798,7 @@ function renderAdmin(){
     <tr>
       <td><b>${String(p.num).padStart(2,'0')}</b></td>
       <td>Block ${p.block}</td>
-      <td style="font-size:.73rem;color:var(--muted)">${p.size}</td>
+      <td style="font-size:.73rem;color:var(--muted)">${p.zone==='N'?'North':'South'}</td>
       <td>${p.name||'<span style="color:var(--muted)">—</span>'}</td>
       <td>${p.phone||'<span style="color:var(--muted)">—</span>'}</td>
       <td>${p.email||'<span style="color:var(--muted)">—</span>'}</td>
@@ -810,7 +817,7 @@ async function adminAction(id, fields, msg){
   if(supabaseReady){
     try{
       await dbUpdate(id, fields);
-      plots=(await dbLoad()).map(x=>({...x,size:x.num<=57?'5 Katha (66-8"×54-0")':'3 Katha (54-0"×40-0")'}));
+      plots=await dbLoad();
     }catch(e){ntf('Error: '+e.message,'error');return;}
   } else {
     Object.assign(p, fields);
@@ -836,7 +843,7 @@ async function resetAll(){
   if(supabaseReady){
     try{
       await dbResetAll();
-      plots=(await dbLoad()).map(x=>({...x,size:x.num<=57?'5 Katha (66-8"×54-0")':'3 Katha (54-0"×40-0")'}));
+      plots=await dbLoad();
     }catch(e){ntf('Error: '+e.message,'error');return;}
   } else {
     plots=defPlots();localSave();
